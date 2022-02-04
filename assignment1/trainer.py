@@ -38,7 +38,7 @@ class BaseTrainer:
         """
         pass
 
-    def train_step(self):
+    def train_step(self, X_batch: np.ndarray, Y_batch: np.ndarray) -> float:
         """
             Perform forward, backward and gradient descent step here.
         Args:
@@ -49,9 +49,7 @@ class BaseTrainer:
         """
         pass
 
-    def train(
-            self,
-            num_epochs: int):
+    def train(self, num_epochs: int, use_early_stopping: bool = False):
         """
         Training loop for model.
         Implements stochastic gradient descent with num_epochs passes over the train dataset.
@@ -61,7 +59,7 @@ class BaseTrainer:
         """
         # Utility variables
         num_batches_per_epoch = self.X_train.shape[0] // self.batch_size
-        num_steps_per_val = num_batches_per_epoch // 5
+        num_steps_per_val = 1 #num_batches_per_epoch // 5
         # A tracking value of loss over all training steps
         train_history = dict(
             loss={},
@@ -88,7 +86,16 @@ class BaseTrainer:
                     val_history["loss"][global_step] = val_loss
                     val_history["accuracy"][global_step] = accuracy_val
 
-                    # TODO (Task 2d): Implement early stopping here.
-                    # You can access the validation loss in val_history["loss"]
+                    # ============================    EARLY STOPPING    ============================
+                    if use_early_stopping and len(val_history["loss"]) > 10:
+                        for vl in (val_history["loss"][global_step - num_steps_per_val*i] for i in range(1, 10+1)):
+                            if val_loss < vl:
+                                break  # Validation loss has improved within the last 10 steps, continue training
+                        else:  # Otherwise, early stopping
+                            print("Early stopping!\n"
+                                  f"Early stop point reached at step {global_step} due to insufficient improvement.")
+                            return train_history, val_history
+                    # ============================  END EARLY STOPPING  ============================
+
                 global_step += 1
         return train_history, val_history

@@ -15,14 +15,12 @@ def calculate_accuracy(X: np.ndarray, targets: np.ndarray, model: BinaryModel) -
     Returns:
         Accuracy (float)
     """
-    # TODO Implement this function (Task 2c)
-    accuracy = 0.0
-    return accuracy
+    return ((model.forward(X) >= 0.5) == targets).mean().item()
 
 
 class LogisticTrainer(BaseTrainer):
 
-    def train_step(self, X_batch: np.ndarray, Y_batch: np.ndarray):
+    def train_step(self, X_batch: np.ndarray, Y_batch: np.ndarray) -> float:
         """
         Perform forward, backward and gradient descent step here.
         The function is called once for every batch (see trainer.py) to perform the train step.
@@ -34,8 +32,11 @@ class LogisticTrainer(BaseTrainer):
         Returns:
             loss value (float) on batch
         """
-        # TODO: Implement this function (task 2b)
-        loss = 0
+        logits = self.model.forward(X_batch)
+        loss = cross_entropy_loss(Y_batch, logits)
+        self.model.zero_grad()
+        self.model.backward(X_batch, logits, Y_batch)
+        self.model.w -= self.learning_rate * self.model.grad  # Gradient descent step
         return loss
 
     def validation_step(self):
@@ -71,7 +72,7 @@ if __name__ == "__main__":
     # Load dataset
     category1, category2 = 2, 3
     X_train, Y_train, X_val, Y_val = utils.load_binary_dataset(
-        category1, category2)
+        category1, category2, sample_stochastic=True)
 
     X_train = pre_process_images(X_train)
     X_val = pre_process_images(X_val)
@@ -85,7 +86,7 @@ if __name__ == "__main__":
         model, learning_rate, batch_size, shuffle_dataset,
         X_train, Y_train, X_val, Y_val,
     )
-    train_history, val_history = trainer.train(num_epochs)
+    train_history, val_history = trainer.train(num_epochs, use_early_stopping=True)
 
     # Plot and print everything you want of information
 
