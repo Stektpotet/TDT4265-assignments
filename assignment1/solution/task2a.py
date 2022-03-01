@@ -1,5 +1,4 @@
 import numpy as np
-
 import utils
 np.random.seed(1)
 
@@ -13,8 +12,11 @@ def pre_process_images(X: np.ndarray):
     """
     assert X.shape[1] == 784,\
         f"X.shape[1]: {X.shape[1]}, should be 784"
-    X = (X / 127.5) - 1  # normalize to -1 to 1
-    X = np.concatenate((X, np.ones((X.shape[0], 1), X.dtype)), axis=1)  # add bias term
+    # TODO implement this function (Task 2a)
+    X = X.astype(float) #sol
+    X = X / 127.5 - 1 #sol
+    ones = np.ones((X.shape[0], 1)) #sol
+    X = np.concatenate((X, ones), axis=1) #sol
     return X
 
 
@@ -26,19 +28,20 @@ def cross_entropy_loss(targets: np.ndarray, outputs: np.ndarray) -> float:
     Returns:
         Cross entropy error (float)
     """
+    # TODO implement this function (Task 2a)
     assert targets.shape == outputs.shape,\
         f"Targets shape: {targets.shape}, outputs: {outputs.shape}"
+    ce = targets * np.log(outputs) + (1 - targets) * np.log(1 - outputs) #sol
+    return -ce.mean() #sol
 
-    ce = -((targets * np.log(outputs)) + (1 - targets) * np.log(1 - outputs))
-    return ce.mean().item()
 
 class BinaryModel:
 
     def __init__(self):
         # Define number of input nodes
-        self.I = 785
-        self.w = np.zeros((self.I, 1), dtype=float)
-        self.grad = np.zeros_like(self.w, dtype=float)
+        self.I = 785 #sol
+        self.w = np.zeros((self.I, 1))
+        self.grad = None
 
     def forward(self, X: np.ndarray) -> np.ndarray:
         """
@@ -47,7 +50,10 @@ class BinaryModel:
         Returns:
             y: output of model with shape [batch size, 1]
         """
-        return 1/(1 + np.exp(-X.dot(self.w)))
+        # TODO implement this function (Task 2a)
+        z = X.dot(self.w) #sol
+        a = 1 / (1 + np.exp(-z)) #sol
+        return a #sol
 
     def backward(self, X: np.ndarray, outputs: np.ndarray, targets: np.ndarray) -> None:
         """
@@ -57,16 +63,18 @@ class BinaryModel:
             outputs: outputs of model of shape: [batch size, 1]
             targets: labels/targets of each image of shape: [batch size, 1]
         """
+        # TODO implement this function (Task 2a)
         assert targets.shape == outputs.shape,\
             f"Output shape: {outputs.shape}, targets: {targets.shape}"
-
-        self.grad = X.T.dot(outputs - targets) / X.shape[0]
-
+        grad = -(targets - outputs) * X #sol
+        grad = grad.mean(axis=0, keepdims=True).T #sol
+        self.grad = np.zeros_like(self.w)
         assert self.grad.shape == self.w.shape,\
             f"Grad shape: {self.grad.shape}, w: {self.w.shape}"
+        self.grad = grad #sol
 
     def zero_grad(self) -> None:
-        self.grad *= 0
+        self.grad = None
 
 
 def gradient_approximation_test(model: BinaryModel, X: np.ndarray, Y: np.ndarray):
@@ -74,8 +82,7 @@ def gradient_approximation_test(model: BinaryModel, X: np.ndarray, Y: np.ndarray
         Numerical approximation for gradients. Should not be edited. 
         Details about this test is given in the appendix in the assignment.
     """
-    w_orig = np.random.normal(
-        loc=0, scale=1/model.w.shape[0]**2, size=model.w.shape)
+    w_orig = np.random.normal(loc=0, scale=1/model.w.shape[0]**2, size=model.w.shape)
     epsilon = 1e-3
     for i in range(w_orig.shape[0]):
         model.w = w_orig.copy()
@@ -103,10 +110,8 @@ if __name__ == "__main__":
     category1, category2 = 2, 3
     X_train, Y_train, *_ = utils.load_binary_dataset(category1, category2)
     X_train = pre_process_images(X_train)
-    assert X_train.max(
-    ) <= 1.0, f"The images (X_train) should be normalized to the range [-1, 1]"
-    assert X_train.min() < 0 and X_train.min() >= - \
-        1, f"The images (X_train) should be normalized to the range [-1, 1]"
+    assert X_train.max() <= 1.0, f"The images (X_train) should be normalized to the range [-1, 1]"
+    assert X_train.min() < 0 and X_train.min() >= -1, f"The images (X_train) should be normalized to the range [-1, 1]"
     assert X_train.shape[1] == 785,\
         f"Expected X_train to have 785 elements per image. Shape was: {X_train.shape}"
 
