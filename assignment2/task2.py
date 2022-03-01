@@ -1,3 +1,4 @@
+import numpy
 import numpy as np
 import utils
 import matplotlib.pyplot as plt
@@ -15,24 +16,36 @@ def calculate_accuracy(X: np.ndarray, targets: np.ndarray, model: SoftmaxModel) 
     Returns:
         Accuracy (float)
     """
-    # TODO: Implement this function (copy from last assignment)
-    accuracy = 0
-    return accuracy
+    pred = model.forward(X)
+    accuracy = np.mean(pred.argmax(axis=1) == targets.argmax(axis=1))
+    return accuracy.item()
 
 
 class SoftmaxTrainer(BaseTrainer):
+
+    def _weight_update(self):
+        for i, (w, grads) in enumerate(zip(self.model.ws, self.model.grads)):
+            self.model.ws[i] = w - self.learning_rate * grads
+
+    def _weight_update_momentum(self):
+        for i, (w, grad, last_grad) in enumerate(zip(self.model.ws, self.model.grads, self._previous_grads)):
+            self._previous_grads[i] = grad + self._momentum_gamma * last_grad     # update what previous grad will be
+            self.model.ws[i] = w - self.learning_rate * self._previous_grads[i]  # update ws using the updated grad
 
     def __init__(
             self,
             momentum_gamma: float,
             use_momentum: bool,
+            learning_rate_schedule: dict[int, float] = None,
             *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-        self.momentum_gamma = momentum_gamma
-        self.use_momentum = use_momentum
-        # Init a history of previous gradients to use for implementing momentum
-        self.previous_grads = [np.zeros_like(w) for w in self.model.ws]
+        self._step = 0
+        self.schedule = learning_rate_schedule if learning_rate_schedule is not None else {}
+        self._previous_grads = [np.zeros_like(g, g.dtype) for g in self.model.grads] if use_momentum else None
+        self._momentum_gamma = momentum_gamma
+        self._weight_update = self._weight_update_momentum if use_momentum else self._weight_update
+
 
     def train_step(self, X_batch: np.ndarray, Y_batch: np.ndarray):
         """
@@ -46,12 +59,17 @@ class SoftmaxTrainer(BaseTrainer):
         Returns:
             loss value (float) on batch
         """
-        # TODO: Implement this function (task 2c)
+        if self._step in self.schedule:
+            self.learning_rate = self.schedule[self._step]
+            print("Step {}: Learning rate changed to {}".format(self._step, self.learning_rate))
 
-        loss = 0
+        pred = self.model.forward(X_batch)
+        loss = cross_entropy_loss(Y_batch, pred)
+        self.model.zero_grad()
+        self.model.backward(X_batch, pred, Y_batch)
+        self._weight_update()
 
-        loss = cross_entropy_loss(Y_batch, logits)  # sol
-
+        self._step += 1
         return loss
 
     def validation_step(self):
@@ -92,7 +110,7 @@ if __name__ == "__main__":
     use_momentum = False
 
     # Load dataset
-    X_train, Y_train, X_val, Y_val = utils.load_full_mnist()
+    X_train, Y_train, X_val, Y_val = utils.load_full_mnist(train_size=60000, val_size=10000, sample_stochastic=True)
     X_train = pre_process_images(X_train)
     X_val = pre_process_images(X_val)
     Y_train = one_hot_encode(Y_train, 10)
@@ -104,11 +122,11 @@ if __name__ == "__main__":
         use_improved_sigmoid,
         use_improved_weight_init)
     trainer = SoftmaxTrainer(
-        momentum_gamma, use_momentum,
+        momentum_gamma, use_momentum, None,
         model, learning_rate, batch_size, shuffle_data,
         X_train, Y_train, X_val, Y_val,
     )
-    train_history, val_history = trainer.train(num_epochs)
+    train_history, val_history = trainer.train(num_epochs, use_early_stopping=False)
 
     print("Final Train Cross Entropy Loss:",
           cross_entropy_loss(Y_train, model.forward(X_train)))
@@ -118,21 +136,27 @@ if __name__ == "__main__":
     print("Validation accuracy:", calculate_accuracy(X_val, Y_val, model))
 
     # Plot loss for first model (task 2c)
-    plt.figure(figsize=(20, 12))
-    plt.subplot(1, 2, 1)
+    _ = plt.figure(figsize=(10, 5))
     plt.ylim([0., .5])
     utils.plot_loss(train_history["loss"],
                     "Training Loss", npoints_to_average=10)
     utils.plot_loss(val_history["loss"], "Validation Loss")
-    plt.legend()
     plt.xlabel("Number of Training Steps")
     plt.ylabel("Cross Entropy Loss - Average")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("task2c_losses.png")
+    plt.show()
+
+    _ = plt.figure(figsize=(10, 5))
     # Plot accuracy
-    plt.subplot(1, 2, 2)
-    plt.ylim([0.90, .99])
+    plt.gcf().clear()
+    plt.ylim([0.90, 1])
     utils.plot_loss(train_history["accuracy"], "Training Accuracy")
     utils.plot_loss(val_history["accuracy"], "Validation Accuracy")
     plt.xlabel("Number of Training Steps")
     plt.ylabel("Accuracy")
     plt.legend()
-    plt.savefig("task2c_train_loss.png")
+    plt.tight_layout()
+    plt.savefig("task2c_accuracies.png")
+    plt.show()

@@ -38,7 +38,7 @@ class BaseTrainer:
         """
         pass
 
-    def train_step(self):
+    def train_step(self, X_batch: np.ndarray, Y_batch: np.ndarray):
         """
             Perform forward, backward and gradient descent step here.
         Args:
@@ -51,7 +51,8 @@ class BaseTrainer:
 
     def train(
             self,
-            num_epochs: int):
+            num_epochs: int,
+            use_early_stopping: bool = False):
         """
         Training loop for model.
         Implements stochastic gradient descent with num_epochs passes over the train dataset.
@@ -87,6 +88,17 @@ class BaseTrainer:
                     train_history["accuracy"][global_step] = accuracy_train
                     val_history["loss"][global_step] = val_loss
                     val_history["accuracy"][global_step] = accuracy_val
-                    # TODO: Implement early stopping (copy from last assignment)
+
+                    # ============================    EARLY STOPPING    ============================
+                    if use_early_stopping and len(val_history["loss"]) > 50:
+                        for vl in (val_history["loss"][global_step - num_steps_per_val*i] for i in range(1, 50+1)):
+                            if val_loss < vl:
+                                break  # Validation loss has improved within the last 50 steps, continue training
+                        else:  # Otherwise, early stopping
+                            print("Early stopping!\n"
+                                  f"Early stop point reached at step {global_step} due to insufficient improvement.")
+                            return train_history, val_history
+                    # ============================  END EARLY STOPPING  ============================
+
                 global_step += 1
         return train_history, val_history

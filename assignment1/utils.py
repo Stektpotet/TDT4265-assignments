@@ -24,6 +24,7 @@ def batch_loader(
     num_batches = len(X) // batch_size
     if not drop_last:
         num_batches = int(np.ceil(len(X) / batch_size))
+
     indices = np.arange(len(X))
     if shuffle:
         np.random.shuffle(indices)

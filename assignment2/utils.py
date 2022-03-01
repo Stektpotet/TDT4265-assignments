@@ -3,6 +3,7 @@ import mnist
 import numpy as np
 import matplotlib.pyplot as plt
 
+np.random.seed(0)
 
 def batch_loader(
         X: np.ndarray, Y: np.ndarray,
@@ -23,9 +24,10 @@ def batch_loader(
     num_batches = len(X) // batch_size
     if not drop_last:
         num_batches = int(np.ceil(len(X) / batch_size))
-    indices = list(range(len(X)))
 
-    # TODO (copy from last assignment) implement dataset shuffling here.
+    indices = np.arange(len(X))
+    if shuffle:
+        np.random.shuffle(indices)
 
     for i in range(num_batches):
         # select a set of indices for each batch of samples
@@ -38,19 +40,43 @@ def batch_loader(
 
 ### NO NEED TO EDIT ANY CODE BELOW THIS ###
 
-
-def load_full_mnist():
+def load_full_mnist(train_size: int = 20000, val_size: int = 10000, sample_stochastic: bool = True):
     """
     Loads and splits the dataset into train, validation and test.
+    Args:
+        train_size: Number of training samples
+        val_size: Number of validation samples
+        sample_stochastic: If True, the subset is sampled stochastically.
+
+    Returns:
+        X_train: images of shape [train_size, 784] in the range (0, 255)
+        Y_train: labels of shape [train_size]
+        X_val: images of shape [test_size, 784] in the range (0, 255)
+        Y_val: labels of shape [test_size]
     """
-    train_size = 20000
-    test_size = 10000
     X_train, Y_train, X_val, Y_val = mnist.load()
 
-    # First 20000 images from train set
-    X_train, Y_train = X_train[:train_size], Y_train[:train_size]
-    # Last 2000 images from test set
-    X_val, Y_val = X_val[-test_size:], Y_val[-test_size:]
+    train_size = train_size if train_size > 0 else len(X_train)
+    val_size = val_size if val_size > 0 else len(X_val)
+
+    if train_size > X_train.shape[0]:
+        raise ValueError(f"train_size ({train_size}) is greater than the number of training samples ({X_train.shape[0]})")
+    if val_size > X_val.shape[0]:
+        raise ValueError(f"val_size ({val_size}) is greater than the number of validation samples ({X_val.shape[0]})")
+
+    if sample_stochastic:
+        train_idx = np.random.choice(X_train.shape[0], train_size, replace=False)
+        val_idx = np.random.choice(X_val.shape[0], val_size, replace=False)
+    else:
+        # Default to first 'train_size' of train set images for training
+        # and last 'test_size' from test set images for validation
+        train_idx = np.arange(train_size)
+        val_idx = np.arange(X_val.shape[0] - val_size, X_val.shape[0])
+
+    # Subset sampling
+    X_train, Y_train = X_train[train_idx], Y_train[train_idx]
+    X_val, Y_val = X_val[val_idx], Y_val[val_idx]
+
     # Reshape to (N, 1)
     Y_train = Y_train.reshape(-1, 1)
     Y_val = Y_val.reshape(-1, 1)
@@ -70,11 +96,10 @@ def plot_loss(loss_dict: dict, label: str = None, npoints_to_average=1, plot_var
     """
     global_steps = list(loss_dict.keys())
     loss = list(loss_dict.values())
-    if npoints_to_average == 1 or not plot_variance:
+    if npoints_to_average == 1:
         plt.plot(global_steps, loss, label=label)
         return
 
-    npoints_to_average = 10
     num_points = len(loss) // npoints_to_average
     mean_loss = []
     loss_std = []
@@ -87,7 +112,8 @@ def plot_loss(loss_dict: dict, label: str = None, npoints_to_average=1, plot_var
         steps.append(step)
     plt.plot(steps, mean_loss,
              label=f"{label} (mean over {npoints_to_average} steps)")
-    plt.fill_between(
-        steps, np.array(mean_loss) -
-        np.array(loss_std), np.array(mean_loss) + loss_std,
-        alpha=.2, label=f"{label} variance over {npoints_to_average} steps")
+    if plot_variance:
+        plt.fill_between(
+            steps, np.array(mean_loss) -
+            np.array(loss_std), np.array(mean_loss) + loss_std,
+            alpha=.2, label=f"{label} variance over {npoints_to_average} steps")
