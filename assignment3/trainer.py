@@ -22,7 +22,6 @@ def compute_loss_and_accuracy(
     """
     average_loss = 0
     accuracy = 0
-    # TODO: Implement this function (Task  2a)
     with torch.no_grad():
         for (X_batch, Y_batch) in dataloader:
             # Transfer images/labels to GPU VRAM, if possible
@@ -30,8 +29,14 @@ def compute_loss_and_accuracy(
             Y_batch = utils.to_cuda(Y_batch)
             # Forward pass the images through our model
             output_probs = model(X_batch)
+            loss = loss_criterion(output_probs, Y_batch)
+            average_loss += loss.item()
+            # Calculate the accuracy
+            preds = output_probs.argmax(dim=1)
+            accuracy += (preds == Y_batch).sum().item()
 
-            # Compute Loss and Accuracy
+    average_loss /= len(dataloader)
+    accuracy /= len(dataloader.sampler)
 
     return average_loss, accuracy
 
@@ -84,6 +89,25 @@ class Trainer:
             accuracy=collections.OrderedDict()
         )
         self.checkpoint_dir = pathlib.Path("checkpoints")
+
+    def full_evaluation(self) -> dict[str, (float, float)]:
+        """
+            Performs one full evaluation pass on all the data loaders
+        """
+        # Perform one full pass over the training dataset.
+        self.model.eval()
+        loaders = {
+            "train": self.dataloader_train,
+            "val": self.dataloader_val,
+            "test": self.dataloader_test
+        }
+        results = {
+            # dataloader : (loss_avg, accuracy)
+        }
+        for loader_name, loader in loaders.items():
+            results[loader_name] = compute_loss_and_accuracy(loader, self.model, self.loss_criterion)
+        self.model.train()
+        return results
 
     def validation_step(self):
         """

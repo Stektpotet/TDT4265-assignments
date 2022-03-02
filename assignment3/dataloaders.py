@@ -1,3 +1,4 @@
+from torch import nn
 from torchvision import transforms, datasets
 from torch.utils.data.sampler import SubsetRandomSampler
 import torch
@@ -16,13 +17,15 @@ def get_data_dir():
     return "data/cifar10"
 
 
-def load_cifar10(batch_size: int, validation_fraction: float = 0.1
+def load_cifar10(batch_size: int, validation_fraction: float = 0.1, augmentation: typing.List[typing.Any] = None,
                  ) -> typing.List[torch.utils.data.DataLoader]:
     # Note that transform train will apply the same transform for
     # validation!
+    augmentation = augmentation or []
     transform_train = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(mean, std),
+        *augmentation,
     ])
     transform_test = transforms.Compose([
         transforms.ToTensor(),
@@ -50,17 +53,17 @@ def load_cifar10(batch_size: int, validation_fraction: float = 0.1
     dataloader_train = torch.utils.data.DataLoader(data_train,
                                                    sampler=train_sampler,
                                                    batch_size=batch_size,
-                                                   num_workers=2,
+                                                   num_workers=3,
                                                    drop_last=True)
 
     dataloader_val = torch.utils.data.DataLoader(data_train,
                                                  sampler=validation_sampler,
                                                  batch_size=batch_size,
-                                                 num_workers=2)
+                                                 num_workers=3)
 
     dataloader_test = torch.utils.data.DataLoader(data_test,
                                                   batch_size=batch_size,
                                                   shuffle=False,
-                                                  num_workers=2)
+                                                  num_workers=3)
 
     return dataloader_train, dataloader_val, dataloader_test
