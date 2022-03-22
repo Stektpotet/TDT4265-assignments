@@ -15,7 +15,7 @@ class BasicBlock(nn.Sequential):
         layers.append(('relu1', nn.ReLU()))
         layers.append(('conv2', nn.Conv2d(mid_channels, mid_channels, kernel_size=3, stride=1, padding=1)))
         if use_bn:
-            layers.append(('bn2', nn.BatchNorm2d(out_channels)))
+            layers.append(('bn2', nn.BatchNorm2d(mid_channels)))
         layers.append(('relu2', nn.ReLU()))
 
         layers.append(('conv3', nn.Conv2d(mid_channels, out_channels, kernel_size=3, stride=out_stride, padding=out_padding)))
@@ -53,9 +53,8 @@ class BasicModel(nn.Module):
         if use_bn:
             features1.insert(1, nn.BatchNorm2d(64))
             features1.insert(5, nn.BatchNorm2d(256))
-            features1.insert(8, nn.BatchNorm2d(256))
-            features1.insert(11, nn.BatchNorm2d(output_channels[0]))
-
+            features1.insert(9, nn.BatchNorm2d(256))
+            features1.insert(12, nn.BatchNorm2d(output_channels[0]))
 
         self.features = nn.Sequential(OrderedDict([
             ('features1', nn.Sequential(*features1)),
