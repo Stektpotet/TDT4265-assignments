@@ -1,2 +1,2 @@
-from .basic4a import BasicModel
+from .basic import BasicModel
 from .vgg import VGG

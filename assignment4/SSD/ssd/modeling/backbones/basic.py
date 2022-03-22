@@ -54,7 +54,6 @@ class BasicModel(nn.Module):
             features1.insert(1, nn.BatchNorm2d(64))
             features1.insert(5, nn.BatchNorm2d(256))
             features1.insert(9, nn.BatchNorm2d(256))
-            features1.insert(12, nn.BatchNorm2d(output_channels[0]))
 
         self.features = nn.Sequential(OrderedDict([
             ('features1', nn.Sequential(*features1)),
