@@ -76,6 +76,13 @@ data_train = dict(
     ),
     # GPU transforms can heavily speedup data augmentations.
     gpu_transform=L(torchvision.transforms.Compose)(transforms=[
+        L(torchvision.transforms.RandomAffine)(
+            degrees=5,
+            translate=(0.05, 0.05),
+            scale=(0.95, 1.05),
+            shear=2,
+            interpolation=torchvision.transforms.InterpolationMode.BILINEAR,
+        ),
         L(Normalize)(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])  # Normalize has to be applied after ToTensor (GPU transform is always after CPU)
     ])
 )
