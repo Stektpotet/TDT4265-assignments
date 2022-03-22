@@ -13,10 +13,15 @@ class BasicBlock(nn.Sequential):
         if use_bn:
             layers.append(('bn1', nn.BatchNorm2d(mid_channels)))
         layers.append(('relu1', nn.ReLU()))
-        layers.append(('conv2', nn.Conv2d(mid_channels, out_channels, kernel_size=3, stride=out_stride, padding=out_padding)))
+        layers.append(('conv2', nn.Conv2d(mid_channels, mid_channels, kernel_size=3, stride=1, padding=1)))
         if use_bn:
             layers.append(('bn2', nn.BatchNorm2d(out_channels)))
         layers.append(('relu2', nn.ReLU()))
+
+        layers.append(('conv3', nn.Conv2d(mid_channels, out_channels, kernel_size=3, stride=out_stride, padding=out_padding)))
+        if use_bn:
+            layers.append(('bn3', nn.BatchNorm2d(out_channels)))
+        layers.append(('relu3', nn.ReLU()))
         super(BasicBlock, self).__init__(OrderedDict(layers))
 
 class BasicModel(nn.Module):
@@ -39,24 +44,24 @@ class BasicModel(nn.Module):
         self.output_feature_shape = output_feature_sizes
 
         features1 = [
-            nn.Conv2d(image_channels, 32, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(image_channels, 64, kernel_size=3, stride=1, padding=1),
             nn.ReLU(), nn.MaxPool2d(2, 2),
-            nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1), nn.ReLU(), nn.MaxPool2d(2, 2),
-            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1), nn.ReLU(),
-            nn.Conv2d(64, output_channels[0], kernel_size=3, stride=2, padding=1), nn.ReLU()
+            nn.Conv2d(64, 256, kernel_size=3, stride=1, padding=1), nn.ReLU(), nn.MaxPool2d(2, 2),
+            nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1), nn.ReLU(),
+            nn.Conv2d(256, output_channels[0], kernel_size=3, stride=2, padding=1), nn.ReLU()
         ]
         if use_bn:
-            features1.insert(1, nn.BatchNorm2d(32))
-            features1.insert(5, nn.BatchNorm2d(64))
-            features1.insert(8, nn.BatchNorm2d(64))
+            features1.insert(1, nn.BatchNorm2d(64))
+            features1.insert(5, nn.BatchNorm2d(256))
+            features1.insert(8, nn.BatchNorm2d(256))
             features1.insert(11, nn.BatchNorm2d(output_channels[0]))
 
 
         self.features = nn.Sequential(OrderedDict([
             ('features1', nn.Sequential(*features1)),
-            ('features2', BasicBlock(output_channels[0], 128, output_channels[1], use_bn=use_bn)),
+            ('features2', BasicBlock(output_channels[0], 256, output_channels[1], use_bn=use_bn)),
             ('features3', BasicBlock(output_channels[1], 256, output_channels[2], use_bn=use_bn)),
-            ('features4', BasicBlock(output_channels[2], 128, output_channels[3], use_bn=use_bn)),
+            ('features4', BasicBlock(output_channels[2], 256, output_channels[3], use_bn=use_bn)),
             ('features5', BasicBlock(output_channels[3], 128, output_channels[4], use_bn=use_bn)),
             ('features6', BasicBlock(output_channels[4], 128, output_channels[5], 1, 0, use_bn=use_bn))
         ]))
